@@ -1,0 +1,6 @@
+torch==2.1.1+cpu
+transformers==4.35.2
+sentence-transformers==2.2.2
+streamlit==1.29.0
+pdfplumber==0.10.3
+numpy==1.23.3
