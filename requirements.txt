@@ -1,4 +1,4 @@
-torch==2.1.1+cpu
+torch==2.1.1
 transformers==4.35.2
 sentence-transformers==2.2.2
 streamlit==1.29.0
