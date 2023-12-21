@@ -7,33 +7,6 @@ import io
 import pickle
 import numpy as np
 
-# Define your custom Classifier class
-
-import numpy
-print(numpy.__version__)
-
-
-class Classifier(nn.Module):
-    def __init__(self, pretrained_model, num_labels):
-        super(Classifier, self).__init__()
-        self.pretrained_model = pretrained_model
-        self.classifier = nn.Linear(
-            pretrained_model.config.hidden_size, num_labels)
-
-    def forward(self, input_ids, attention_mask=None):
-        outputs = self.pretrained_model(
-            input_ids=input_ids, attention_mask=attention_mask)
-        return self.classifier(outputs.pooler_output)
-
-
-# Define a function to load the trained model
-def load_model(model_path, pretrained_model, num_labels):
-    model = Classifier(pretrained_model, num_labels)
-    model.load_state_dict(torch.load(
-        model_path, map_location=torch.device('cpu')))
-    model.eval()  # Set the model to evaluation mode
-    return model
-
 
 # Streamlit app setup
 st.title('We\'re looking for a job')
@@ -43,8 +16,6 @@ st.markdown('<div class="title-box"><h1>First, upload your resume as a PDF file<
 uploaded_file = st.file_uploader("", type="pdf")
 
 # Define the function to read and preprocess the PDF for job level prediction
-
-
 def read_and_preprocess_for_job_level(file):
     with pdfplumber.open(file) as pdf:
         text = "\n".join([page.extract_text()
@@ -119,9 +90,6 @@ with open('job_encodings.pkl', 'rb') as f:
 if uploaded_file is not None and st.button('Recommend Jobs'):
     resume_text_for_recommendation = read_and_preprocess_for_job_level(
         io.BytesIO(uploaded_file.getvalue()))
-    # resume_encoding = encode_text(
-    #     resume_text_for_recommendation, tokenizer_for_recommendation, model_for_recommendation)
-
     resume_encoding = encode_resume_text(resume_text_for_recommendation)
 
     # Compute similarities
