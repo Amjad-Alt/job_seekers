@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from transformers import AutoTokenizer, AutoModel, AutoConfig
 from sentence_transformers import SentenceTransformer
 import streamlit as st
 import pdfplumber
@@ -9,6 +8,9 @@ import pickle
 import numpy as np
 
 # Define your custom Classifier class
+
+import numpy
+print(numpy.__version__)
 
 
 class Classifier(nn.Module):
@@ -33,17 +35,6 @@ def load_model(model_path, pretrained_model, num_labels):
     return model
 
 
-# Load the tokenizer for job level prediction
-checkpoint = "bert-base-uncased"
-tokenizer_for_prediction = AutoTokenizer.from_pretrained(checkpoint)
-
-# Load your trained model for job level prediction
-num_labels = 5  # Replace with the number of job level classes
-bert_model_for_prediction = AutoModel.from_pretrained(
-    checkpoint, config=AutoConfig.from_pretrained(checkpoint))
-loaded_model = load_model("./trained_model.pth",
-                          bert_model_for_prediction, num_labels)
-
 # Streamlit app setup
 st.title('We\'re looking for a job')
 st.write('Hello, job seekers!')
@@ -61,22 +52,6 @@ def read_and_preprocess_for_job_level(file):
     return text
 
 # Define the function to preprocess text and make predictions for job level
-
-
-def predict_job_level(text, model, tokenizer):
-    # Tokenize the input text
-    encoded_input = tokenizer(
-        text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
-    input_ids = encoded_input['input_ids']
-    attention_mask = encoded_input['attention_mask']
-
-    # Run the model to get predictions
-    with torch.no_grad():
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-
-    # Get the predicted class (job level)
-    prediction = torch.argmax(outputs, dim=-1).item()
-    return prediction
 
 
 def get_job_level_info(prediction):
@@ -100,6 +75,22 @@ def get_job_level_info(prediction):
     return job_level_info.get(prediction, ("Unknown Level", "No description available"))
 
 
+with open('logistic_regression_model.pkl', 'rb') as file:
+    logistic_regression_model = pickle.load(file)
+
+with open('tfidf_vectorizer.pkl', 'rb') as file:
+    vectorizer = pickle.load(file)
+
+
+def predict_job_level(text, model, vectorizer):
+    # Transform the input text using TF-IDF
+    transformed_text = vectorizer.transform([text])
+
+    # Run the logistic regression model to get predictions
+    prediction = model.predict(transformed_text)[0]
+    return prediction
+
+
 if uploaded_file is not None:
     resume_text_for_job_level = read_and_preprocess_for_job_level(
         io.BytesIO(uploaded_file.getvalue()))
@@ -108,26 +99,11 @@ if uploaded_file is not None:
 
     if st.button('Predict Job Level'):
         job_level = predict_job_level(
-            resume_text_for_job_level, loaded_model, tokenizer_for_prediction)
+            resume_text_for_job_level, logistic_regression_model, vectorizer)
         job_level_title, job_level_description = get_job_level_info(job_level)
         st.write(f'**Recommended Job Level to Apply For:** {job_level_title}')
         st.write(job_level_description)
 
-# # Load tokenizer and model for job recommendations
-# tokenizer_for_recommendation = AutoTokenizer.from_pretrained(
-#     'bert-base-uncased')
-# model_for_recommendation = AutoModel.from_pretrained('bert-base-uncased')
-
-# Define function to encode text for job recommendations
-
-
-# def encode_text(text, tokenizer, model):
-#     input_ids = tokenizer.encode(
-#         text, add_special_tokens=True, max_length=512, truncation=True)
-#     input_ids = torch.tensor([input_ids])
-#     with torch.no_grad():
-#         outputs = model(input_ids)
-#     return outputs[0][0].mean(dim=0).numpy()  # Mean pooling
 
 def encode_resume_text(text):
     model = SentenceTransformer('bert-base-nli-mean-tokens')
